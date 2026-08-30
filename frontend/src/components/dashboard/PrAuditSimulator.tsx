@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SAMPLE_PRS, PullRequestScenario } from "@/lib/mockData";
-import { checkBackendHealth, runLiveBeat } from "@/lib/api";
+import { checkBackendHealth, runLiveBeat, fetchLiveEvents } from "@/lib/api";
 import { BauhausCard } from "@/components/ui/BauhausCard";
 import { BauhausButton } from "@/components/ui/BauhausButton";
 import { BauhausBadge } from "@/components/ui/BauhausBadge";
@@ -19,6 +19,7 @@ import {
   Unlock,
   Radio,
   Server,
+  Zap,
 } from "lucide-react";
 
 export const PrAuditSimulator: React.FC = () => {
@@ -29,6 +30,7 @@ export const PrAuditSimulator: React.FC = () => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(4);
   const [backendConnected, setBackendConnected] = useState<boolean>(false);
   const [liveBackendLogs, setLiveBackendLogs] = useState<string>("");
+  const [liveEvents, setLiveEvents] = useState<any[]>([]);
   const [commitStatus, setCommitStatus] = useState<"failure" | "success">(
     SAMPLE_PRS[0].commitGateStatus as "failure" | "success"
   );
@@ -36,6 +38,16 @@ export const PrAuditSimulator: React.FC = () => {
 
   useEffect(() => {
     checkBackendHealth().then((isHealthy) => setBackendConnected(isHealthy));
+    fetchLiveEvents().then((events) => setLiveEvents(events));
+
+    const pollInterval = setInterval(() => {
+      fetchLiveEvents().then((events) => {
+        if (events && events.length > 0) setLiveEvents(events);
+      });
+      checkBackendHealth().then((isHealthy) => setBackendConnected(isHealthy));
+    }, 2500);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   const simulationSteps = [
@@ -156,6 +168,37 @@ export const PrAuditSimulator: React.FC = () => {
           {isRunning ? "Auditing PR..." : "Re-Run Audit"}
         </BauhausButton>
       </div>
+
+      {/* Live GitHub Webhook Event Ticker */}
+      {liveEvents.length > 0 ? (
+        <div className="bg-[#FFF9C4] border-2 md:border-4 border-black p-4 shadow-[4px_4px_0px_0px_#121212] flex items-center justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-green-500 animate-ping" />
+            <div className="text-xs font-mono">
+              <span className="font-black uppercase bg-black text-white px-2 py-0.5 mr-2">
+                ⚡ LIVE GITHUB WEBHOOK
+              </span>
+              <span className="font-bold text-black">
+                {liveEvents[0].repo} — PR #{liveEvents[0].pr_number} ({liveEvents[0].action}) by @{liveEvents[0].author}
+              </span>
+              <span className="text-neutral-600 ml-2 font-normal">
+                [{liveEvents[0].timestamp}]
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-green-600 text-white">
+            RECEIVED VIA CLOUD RUN
+          </span>
+        </div>
+      ) : (
+        <div className="bg-white border-2 border-black p-3 text-xs font-mono text-neutral-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+            <span>Webhook Receiver Active: Listening for live PRs on <strong>sufiyantesting789/production-web</strong></span>
+          </div>
+          <span className="text-[10px] font-black uppercase bg-neutral-200 px-2 py-0.5">POLLING EVERY 2.5S</span>
+        </div>
+      )}
 
       {/* PR Scenario Selector Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -200,6 +200,20 @@ async def receive_webhook(
             reason=None if should_process else f"PR action '{action}' skipped by triage policy",
         )
 
+        # Record in live stream
+        LIVE_ACTIVITY_STREAM.insert(0, {
+            "id": delivery_id,
+            "event": "pull_request",
+            "action": action,
+            "repo": repository.full_name,
+            "pr_number": pull_request.number,
+            "author": sender.login,
+            "title": pull_request.title,
+            "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
+        })
+        if len(LIVE_ACTIVITY_STREAM) > 50:
+            LIVE_ACTIVITY_STREAM.pop()
+
         # Publish event to Pub/Sub
         msg_id = publisher.publish_event(normalized_event)
 
@@ -274,6 +288,20 @@ async def receive_webhook(
             should_process=True,
         )
 
+        # Record in live stream
+        LIVE_ACTIVITY_STREAM.insert(0, {
+            "id": delivery_id,
+            "event": "issue_comment",
+            "action": action,
+            "repo": repository.full_name,
+            "pr_number": pr_number,
+            "author": sender.login,
+            "title": f"Comment on PR #{pr_number}",
+            "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
+        })
+        if len(LIVE_ACTIVITY_STREAM) > 50:
+            LIVE_ACTIVITY_STREAM.pop()
+
         # Publish event to Pub/Sub
         msg_id = publisher.publish_event(normalized_event)
 
@@ -312,10 +340,14 @@ async def receive_webhook(
         }
 
 
+LIVE_ACTIVITY_STREAM = []
+
+
 # ---------------------------------------------------------------------------
 # Visual Web Dashboard & Interactive Demo Endpoints
 # ---------------------------------------------------------------------------
 
+from datetime import datetime, timezone
 from fastapi.responses import HTMLResponse
 from services.receiver.dashboard import DASHBOARD_HTML
 from common.firestore_client import get_firestore_memory_bank
@@ -330,15 +362,21 @@ async def view_dashboard():
     return HTMLResponse(content=DASHBOARD_HTML)
 
 
+@router.get("/api/dashboard/live-feed", tags=["Dashboard"])
+async def get_live_feed():
+    """Returns real-time webhook activity stream from GitHub."""
+    return {"events": LIVE_ACTIVITY_STREAM, "total": len(LIVE_ACTIVITY_STREAM)}
+
+
 @router.get("/api/dashboard/memory", tags=["Dashboard"])
-async def get_dashboard_memory(settings: Settings = Depends(get_settings)):
+async def get_dashboard_memory(repo: Optional[str] = None, settings: Settings = Depends(get_settings)):
     """Fetches real-time Firestore Memory Bank contents for the dashboard."""
     fb = get_firestore_memory_bank(settings)
-    repo_id = "octocat_production-web"
-    decisions = fb.get_all_decisions(repo_id)
-    habits = fb.get_all_habits(repo_id)
-    audit_logs = fb.get_audit_logs(repo_id)
-    brief = fb.get_memory_brief(repo_id)
+    repo_id = repo.replace("/", "_") if repo else "sufiyantesting789_production-web"
+    decisions = fb.get_all_decisions(repo_id) or fb.get_all_decisions("octocat_production-web")
+    habits = fb.get_all_habits(repo_id) or fb.get_all_habits("octocat_production-web")
+    audit_logs = fb.get_audit_logs(repo_id) or fb.get_audit_logs("octocat_production-web")
+    brief = fb.get_memory_brief(repo_id) or fb.get_memory_brief("octocat_production-web")
 
     formatted_decisions = []
     for idx, d in enumerate(decisions):
@@ -349,7 +387,7 @@ async def get_dashboard_memory(settings: Settings = Depends(get_settings)):
     formatted_habits = []
     for idx, h in enumerate(habits):
         h_dict = h.model_dump(mode="json")
-        h_dict["author_id"] = h_dict.get("author_id") or "dev-alice"
+        h_dict["author_id"] = h_dict.get("author_id") or "sufiyantesting789"
         formatted_habits.append(h_dict)
 
     return {
@@ -358,6 +396,7 @@ async def get_dashboard_memory(settings: Settings = Depends(get_settings)):
         "habits": formatted_habits,
         "audit_logs": [a.model_dump(mode="json") for a in audit_logs],
         "brief": brief.model_dump(mode="json") if brief else None,
+        "recent_events": LIVE_ACTIVITY_STREAM[:5],
     }
 
 

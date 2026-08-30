@@ -64,6 +64,28 @@ export async function runLiveBeat(beat: number): Promise<{ status: string; log: 
   }
 }
 
+export async function fetchLiveEvents(): Promise<Array<{
+  id: string;
+  event: string;
+  action: string;
+  repo: string;
+  pr_number: number;
+  author: string;
+  title: string;
+  timestamp: string;
+}>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/dashboard/live-feed`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.events || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function resetBackendState(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/dashboard/reset`, {
@@ -74,3 +96,4 @@ export async function resetBackendState(): Promise<boolean> {
     return false;
   }
 }
+

@@ -81,6 +81,47 @@ class GitHubClient:
                     logger.warning("Could not initialise HTTP client: %s", e)
         return self._http_client
 
+    def get_installation_access_token(self, installation_id: Optional[int]) -> Optional[str]:
+        """Exchanges GitHub App private key + app ID for a short-lived installation access token."""
+        if not installation_id:
+            return None
+
+        private_key = self.settings.GITHUB_APP_PRIVATE_KEY
+        app_id = self.settings.GITHUB_APP_ID
+
+        if not private_key or not app_id or private_key.startswith("mock"):
+            return None
+
+        try:
+            import jwt
+            import time
+            import httpx
+
+            now = int(time.time())
+            payload = {
+                "iat": now - 60,
+                "exp": now + 600,
+                "iss": str(app_id),
+            }
+            encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+
+            url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
+            headers = {
+                "Authorization": f"Bearer {encoded_jwt}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+            resp = httpx.post(url, headers=headers, timeout=15.0)
+            if resp.is_success:
+                token_data = resp.json()
+                return token_data.get("token")
+            else:
+                logger.warning("Failed to obtain installation token: %s %s", resp.status_code, resp.text)
+                return None
+        except Exception as e:
+            logger.warning("Exception while generating installation access token: %s", e)
+            return None
+
     def _record_call(self, method: str, endpoint: str, payload: dict, response: dict = None) -> GitHubAPICall:
         call = GitHubAPICall(method=method, endpoint=endpoint, payload=payload, response=response)
         self.api_calls.append(call)
