@@ -3,7 +3,7 @@
 import json
 import logging
 from typing import Any, Dict
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response, status
 
 from common.config import Settings, get_settings
 from common.crypto import verify_github_signature
@@ -72,11 +72,13 @@ async def readiness_check(
 @router.post("/webhook", tags=["Webhook"], status_code=status.HTTP_200_OK)
 async def receive_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_github_event: str = Header(None, alias="X-GitHub-Event"),
     x_hub_signature_256: str = Header(None, alias="X-Hub-Signature-256"),
     x_github_delivery: str = Header(None, alias="X-GitHub-Delivery"),
     secret_mgr: SecretManagerClient = Depends(get_secret_manager),
     publisher: EventPublisher = Depends(get_event_publisher),
+    settings: Settings = Depends(get_settings),
 ):
     """Receives, verifies, normalizes, and publishes incoming GitHub webhook events.
     
@@ -201,6 +203,14 @@ async def receive_webhook(
         # Publish event to Pub/Sub
         msg_id = publisher.publish_event(normalized_event)
 
+        # Dispatch background orchestrator processing for live GitHub status checks & comments
+        try:
+            from services.worker.orchestrator import get_worker_orchestrator
+            orch = get_worker_orchestrator(settings=settings)
+            background_tasks.add_task(orch.process_event, normalized_event)
+        except Exception as e:
+            logger.warning("Could not dispatch background worker: %s", e)
+
         logger.info(
             "Processed PR #%s event (%s) on %s - Published msg_id: %s",
             pull_request.number, action, repository.full_name, msg_id
@@ -266,6 +276,14 @@ async def receive_webhook(
 
         # Publish event to Pub/Sub
         msg_id = publisher.publish_event(normalized_event)
+
+        # Dispatch background orchestrator processing for live dialogue
+        try:
+            from services.worker.orchestrator import get_worker_orchestrator
+            orch = get_worker_orchestrator(settings=settings)
+            background_tasks.add_task(orch.process_event, normalized_event)
+        except Exception as e:
+            logger.warning("Could not dispatch background worker: %s", e)
 
         logger.info(
             "Processed PR #%s comment by %s - Published msg_id: %s",

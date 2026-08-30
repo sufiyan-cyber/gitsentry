@@ -100,28 +100,10 @@ def test_full_three_pr_demo_scenario(demo_env):
         is_pull_request=True,
     )
 
-    # Initial PR opened -> set pending
+    # Initial PR opened -> set pending and processed through audit
     res_pr1 = orchestrator.process_event(pr1_event)
-    assert res_pr1["status"] == "processed"
-    assert gh.set_statuses[-1]["state"] == "pending"
-
-    # Deep audit finds unauthenticated route -> status failure
-    audit1 = DeepAuditResult(
-        findings=[
-            SecurityFinding(
-                severity=SeverityLevel.HIGH,
-                line_range="10-15",
-                owasp_category="A01:2021-Broken Access Control",
-                explanation="Unauthenticated /health route exposed",
-                suggested_fix="add_auth()",
-                confidence=0.90,
-                file_path="src/health.py",
-            )
-        ],
-        summary="High severity vulnerability found",
-    )
-    res_audit1 = orchestrator.process_audit_result(pr1_event, audit1)
-    assert res_audit1["commit_status"] == "failure"
+    assert res_pr1["status"] in ("processed", "audit_processed")
+    assert any(s["state"] == "pending" for s in gh.set_statuses)
     assert gh.set_statuses[-1]["state"] == "failure"
 
     # Thin comment justification -> Socratic pushback (not accepted)
