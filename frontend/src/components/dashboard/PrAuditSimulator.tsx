@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SAMPLE_PRS, PullRequestScenario } from "@/lib/mockData";
-import { checkBackendHealth, runLiveBeat, fetchLiveEvents } from "@/lib/api";
+import { checkBackendHealth, runLiveBeat, fetchLiveEvents, fetchLivePRs } from "@/lib/api";
 import { BauhausCard } from "@/components/ui/BauhausCard";
 import { BauhausButton } from "@/components/ui/BauhausButton";
 import { BauhausBadge } from "@/components/ui/BauhausBadge";
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 export const PrAuditSimulator: React.FC = () => {
+  const [livePrList, setLivePrList] = useState<any[]>([]);
   const [selectedPr, setSelectedPr] = useState<PullRequestScenario>(
     SAMPLE_PRS[0]
   );
@@ -39,16 +40,29 @@ export const PrAuditSimulator: React.FC = () => {
   useEffect(() => {
     checkBackendHealth().then((isHealthy) => setBackendConnected(isHealthy));
     fetchLiveEvents().then((events) => setLiveEvents(events));
+    fetchLivePRs().then((prs) => {
+      if (prs && prs.length > 0) {
+        setLivePrList(prs);
+        setSelectedPr(prs[0]);
+      }
+    });
 
     const pollInterval = setInterval(() => {
       fetchLiveEvents().then((events) => {
         if (events && events.length > 0) setLiveEvents(events);
+      });
+      fetchLivePRs().then((prs) => {
+        if (prs && prs.length > 0) {
+          setLivePrList(prs);
+        }
       });
       checkBackendHealth().then((isHealthy) => setBackendConnected(isHealthy));
     }, 2500);
 
     return () => clearInterval(pollInterval);
   }, []);
+
+  const displayedPrs = livePrList.length > 0 ? livePrList : SAMPLE_PRS;
 
   const simulationSteps = [
     {
@@ -202,7 +216,7 @@ export const PrAuditSimulator: React.FC = () => {
 
       {/* PR Scenario Selector Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {SAMPLE_PRS.map((pr) => {
+        {displayedPrs.map((pr) => {
           const isSelected = selectedPr.id === pr.id;
           return (
             <button

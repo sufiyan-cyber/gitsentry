@@ -64,6 +64,19 @@ export async function runLiveBeat(beat: number): Promise<{ status: string; log: 
   }
 }
 
+export async function fetchLivePRs(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/dashboard/prs`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.prs || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchLiveEvents(): Promise<Array<{
   id: string;
   event: string;
