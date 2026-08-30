@@ -223,35 +223,45 @@ class WorkerOrchestrator:
             memory_annotations.append(enrichment["comment_suffix"])
 
         # 3. Run remediation engine
-        remediation_results = self.remediation.process_findings(
-            owner=owner,
-            repo=repo_name,
-            original_pr_number=pr_number,
-            base_branch=base_ref,
-            head_sha=head_sha or "",
-            findings=audit_result.findings,
-            repo_id=repo_id,
-            author_id=author_id,
-            installation_token=installation_token,
-        )
+        remediation_results = []
+        try:
+            remediation_results = self.remediation.process_findings(
+                owner=owner,
+                repo=repo_name,
+                original_pr_number=pr_number,
+                base_branch=base_ref,
+                head_sha=head_sha or "",
+                findings=audit_result.findings,
+                repo_id=repo_id,
+                author_id=author_id,
+                installation_token=installation_token,
+            )
+        except Exception as e:
+            logger.warning("Remediation PR processing failed: %s", e)
 
         # 4. Post combined findings comment
-        comment_body = self.remediation.build_findings_comment(
-            findings=audit_result.findings,
-            remediation_results=remediation_results,
-            memory_annotations=memory_annotations,
-        )
-        self.github.post_pr_comment(
-            owner=owner, repo=repo_name, pr_number=pr_number,
-            body=comment_body, installation_token=installation_token,
-        )
+        try:
+            comment_body = self.remediation.build_findings_comment(
+                findings=audit_result.findings,
+                remediation_results=remediation_results,
+                memory_annotations=memory_annotations,
+            )
+            self.github.post_pr_comment(
+                owner=owner, repo=repo_name, pr_number=pr_number,
+                body=comment_body, installation_token=installation_token,
+            )
+        except Exception as e:
+            logger.warning("Could not post PR findings comment: %s", e)
 
         # 5. Set commit status based on findings
         status_state = "success"
         if head_sha:
-            status_state = self.status_mgr.evaluate_audit_result(
-                owner, repo_name, head_sha, audit_result, installation_token
-            )
+            try:
+                status_state = self.status_mgr.evaluate_audit_result(
+                    owner, repo_name, head_sha, audit_result, installation_token
+                )
+            except Exception as e:
+                logger.warning("Could not evaluate and set commit status: %s", e)
 
         return {
             "status": "audit_processed",
