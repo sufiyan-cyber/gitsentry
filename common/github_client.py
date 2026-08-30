@@ -45,10 +45,20 @@ class GitHubClient:
         self._initialized = False
         
         # Check if live GitHub App credentials are provided
+        private_key = self.settings.GITHUB_APP_PRIVATE_KEY
+        if not private_key:
+            try:
+                from common.secrets import get_secret_manager
+                private_key = get_secret_manager(self.settings).get_app_private_key()
+            except Exception:
+                private_key = None
+
         has_real_creds = bool(
-            self.settings.GITHUB_APP_PRIVATE_KEY
-            and not self.settings.GITHUB_APP_PRIVATE_KEY.startswith("mock")
-            and "..." not in self.settings.GITHUB_APP_PRIVATE_KEY
+            private_key
+            and not str(private_key).startswith("mock")
+            and "..." not in str(private_key)
+            and self.settings.GITHUB_APP_ID
+            and str(self.settings.GITHUB_APP_ID) not in ("123456", "mock")
         )
         self._use_mock = force_mock or self.settings.is_test or not has_real_creds
 
@@ -87,9 +97,16 @@ class GitHubClient:
             return None
 
         private_key = self.settings.GITHUB_APP_PRIVATE_KEY
+        if not private_key:
+            try:
+                from common.secrets import get_secret_manager
+                private_key = get_secret_manager(self.settings).get_app_private_key()
+            except Exception:
+                private_key = None
+
         app_id = self.settings.GITHUB_APP_ID
 
-        if not private_key or not app_id or private_key.startswith("mock"):
+        if not private_key or not app_id or str(private_key).startswith("mock"):
             return None
 
         try:
@@ -103,7 +120,9 @@ class GitHubClient:
                 "exp": now + 600,
                 "iss": str(app_id),
             }
-            encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+            # Handle \n escaped strings from environment variables
+            formatted_key = private_key.replace("\\n", "\n") if isinstance(private_key, str) else private_key
+            encoded_jwt = jwt.encode(payload, formatted_key, algorithm="RS256")
 
             url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
             headers = {
@@ -114,6 +133,7 @@ class GitHubClient:
             resp = httpx.post(url, headers=headers, timeout=15.0)
             if resp.is_success:
                 token_data = resp.json()
+                logger.info("Successfully minted GitHub installation token for installation %s", installation_id)
                 return token_data.get("token")
             else:
                 logger.warning("Failed to obtain installation token: %s %s", resp.status_code, resp.text)

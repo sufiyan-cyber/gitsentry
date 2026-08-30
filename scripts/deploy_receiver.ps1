@@ -105,8 +105,8 @@ gcloud run deploy $ServiceName `
     --region=$Region `
     --platform=managed `
     --allow-unauthenticated `
-    --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=$ProjectId,PUBSUB_TOPIC_PR_EVENTS=$TopicName" `
-    --set-secrets="GITHUB_WEBHOOK_SECRET=github-webhook-secret:latest" `
+    --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=$ProjectId,PUBSUB_TOPIC_PR_EVENTS=$TopicName,GITHUB_APP_ID=4770215" `
+    --set-secrets="GITHUB_WEBHOOK_SECRET=github-webhook-secret:latest,GITHUB_APP_PRIVATE_KEY=github-app-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest" `
     --min-instances=0 `
     --max-instances=10 `
     --memory=512Mi `

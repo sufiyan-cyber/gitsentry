@@ -80,6 +80,13 @@ class WorkerOrchestrator:
             logger.info("Skipping event %s: %s", event.event_id, event.reason)
             return {"status": "skipped", "reason": event.reason}
 
+        # Mint installation token for live GitHub API interactions
+        if not installation_token and event.installation_id:
+            try:
+                installation_token = self.github.get_installation_access_token(event.installation_id)
+            except Exception as e:
+                logger.warning("Could not generate installation access token: %s", e)
+
         if event.event_type == EventType.PULL_REQUEST:
             return self._handle_pull_request(event, installation_token)
         elif event.event_type == EventType.ISSUE_COMMENT:
