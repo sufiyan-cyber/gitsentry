@@ -268,7 +268,11 @@ async def receive_webhook(
             TRACKED_PRS.insert(0, live_scenario)
 
         # Publish event to Pub/Sub
-        msg_id = publisher.publish_event(normalized_event)
+        msg_id = "mock-msg-id"
+        try:
+            msg_id = publisher.publish_event(normalized_event)
+        except Exception as e:
+            logger.warning("Could not publish event to Pub/Sub: %s", e)
 
         # Dispatch background orchestrator processing for live GitHub status checks & comments
         try:
@@ -356,7 +360,11 @@ async def receive_webhook(
             LIVE_ACTIVITY_STREAM.pop()
 
         # Publish event to Pub/Sub
-        msg_id = publisher.publish_event(normalized_event)
+        msg_id = "mock-msg-id"
+        try:
+            msg_id = publisher.publish_event(normalized_event)
+        except Exception as e:
+            logger.warning("Could not publish event to Pub/Sub: %s", e)
 
         # Dispatch background orchestrator processing for live dialogue
         try:
