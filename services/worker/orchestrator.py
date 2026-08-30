@@ -282,9 +282,16 @@ class WorkerOrchestrator:
         if event.pull_request and event.pull_request.head:
             head_sha = event.pull_request.head_sha
 
+        if not head_sha:
+            try:
+                pr_data = self.github.get_pull_request(owner, repo_name, pr_number, installation_token=installation_token)
+                head_sha = pr_data.get("head", {}).get("sha")
+            except Exception as e:
+                logger.warning("Could not fetch head_sha for PR #%d: %s", pr_number, e)
+
         logger.info(
-            "Processing comment on PR #%d by @%s: %s",
-            pr_number, comment_author, comment_body[:100],
+            "Processing comment on PR #%d by @%s (sha=%s): %s",
+            pr_number, comment_author, head_sha[:8] if head_sha else "none", comment_body[:100],
         )
 
         # Route through dialogue handler

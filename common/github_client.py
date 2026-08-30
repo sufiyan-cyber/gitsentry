@@ -276,6 +276,25 @@ class GitHubClient:
         self._record_call("POST", endpoint, payload, result)
         return result
 
+    def get_pull_request(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        installation_token: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Fetches a pull request by number to retrieve its head SHA and details."""
+        endpoint = f"/repos/{owner}/{repo}/pulls/{pr_number}"
+        if self._use_mock:
+            return {"number": pr_number, "head": {"sha": "mock_sha_123"}}
+        client = self._get_http_client()
+        headers = {}
+        if installation_token:
+            headers["Authorization"] = f"token {installation_token}"
+        resp = client.get(endpoint, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
     # ------------------------------------------------------------------
     # Branch & Remediation PR Creation
     # ------------------------------------------------------------------

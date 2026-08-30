@@ -240,7 +240,7 @@ class DialogueHandler:
         return DialogueResponse(
             action="accepted_override",
             reply_body=reply,
-            justification_strength=JustificationStrength.STRONG,
+            justification_strength=strength,
             decision_recorded=True,
             status_cleared=True,
         )
