@@ -1,0 +1,16 @@
+# Core Framework & Web
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+httpx>=0.28.0
+
+# Google Cloud Platform
+google-cloud-secret-manager>=2.22.0
+google-cloud-pubsub>=2.27.0
+google-cloud-firestore>=2.20.0
+google-genai>=1.0.0
+
+# Security & Utilities
+cryptography>=44.0.0
+python-dotenv>=1.0.1

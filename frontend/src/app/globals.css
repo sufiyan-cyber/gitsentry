@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F0F0F0;
+  --foreground: #121212;
+  --font-outfit: 'Outfit', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #F0F0F0;
+  color: #121212;
+  font-family: var(--font-outfit), sans-serif;
+  overflow-x: hidden;
+  letter-spacing: -0.01em;
+}
+
+/* Bauhaus Text Selection */
+::selection {
+  background-color: #F0C020;
+  color: #121212;
+}
+
+/* Custom Bauhaus Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F0F0F0;
+  border-left: 2px solid #121212;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D02020;
+  border: 2px solid #121212;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1040C0;
+}
+
+/* Bauhaus Geometric Background Patterns */
+.bg-dot-grid {
+  background-image: radial-gradient(#121212 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+.bg-dot-grid-white {
+  background-image: radial-gradient(#FFFFFF 2px, transparent 2px);
+  background-size: 24px 24px;
+}
+
+.bg-dot-grid-yellow {
+  background-image: radial-gradient(#F0C020 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+.bg-lines-diagonal {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(18, 18, 18, 0.08) 10px,
+    rgba(18, 18, 18, 0.08) 20px
+  );
+}
+
+/* Geometric Clip Paths */
+.clip-triangle {
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.clip-triangle-right {
+  clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+}
+
+.clip-triangle-down {
+  clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+/* Hard Shadows Utility Classes */
+.shadow-bauhaus-sm {
+  box-shadow: 4px 4px 0px 0px #121212;
+}
+
+.shadow-bauhaus-md {
+  box-shadow: 6px 6px 0px 0px #121212;
+}
+
+.shadow-bauhaus-lg {
+  box-shadow: 8px 8px 0px 0px #121212;
+}
+
+.shadow-bauhaus-white {
+  box-shadow: 6px 6px 0px 0px #FFFFFF;
+}
+
+.shadow-bauhaus-yellow {
+  box-shadow: 6px 6px 0px 0px #F0C020;
+}
+
+/* Snappy Mechanical Transitions */
+.transition-snappy {
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
