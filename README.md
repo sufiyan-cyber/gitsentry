@@ -125,13 +125,35 @@ python scripts/test_webhook.py --event pull_request --invalid-signature
 
 ---
 
-## 🧪 Running the Test Suite
+## 🧪 Reproducible Testing Instructions
 
-Run unit and integration tests with coverage:
+GitSentry includes an automated end-to-end test suite and local webhook simulation scripts for instant verification:
 
+### 1. Automated Test Suite (Pytest)
+Run the full unit and integration test suite with coverage:
 ```bash
-pytest -v --cov=common --cov=services/receiver tests/
+pytest -v --cov=common --cov=services tests/
 ```
+
+### 2. Live Webhook Simulation Scripts
+Send cryptographically signed GitHub HMAC webhook events to verify triage and gatekeeping:
+```bash
+# Verify ping delivery
+python scripts/test_webhook.py --event ping
+
+# Verify PR opened triage
+python scripts/test_webhook.py --event pull_request --action opened
+
+# Verify Socratic comment negotiation
+python scripts/test_webhook.py --event issue_comment --action created
+
+# Verify HMAC security rejection on forged signatures
+python scripts/test_webhook.py --event pull_request --invalid-signature
+```
+
+### 3. Live Dashboard & Cloud Verification
+- Access the live interactive workbench: `https://gitsentry-two.vercel.app/dashboard`
+- Inspect persistent Firestore memory records under the **Memory Bank** tab.
 
 ---
 
